@@ -1,0 +1,323 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f7f7f7;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .balance-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .balance {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2ecc71;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #27ae60;
+        }
+
+        .transactions {
+            margin-top: 20px;
+        }
+
+        .transaction {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .expense {
+            color: #e74c3c;
+        }
+
+        .income {
+            color: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Expense Tracker</h1>
+        
+        <div class="balance-container">
+            <h2>Current Balance</h2>
+            <div class="balance" id="balance">₹0.00</div>
+        </div>
+
+
+        <form id="expense-form">
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input type="text" id="description" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="amount">Amount</label>
+                <input type="number" id="amount" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="type">Type</label>
+                <select id="type" required>
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                </select>
+            </div>
+            
+            <button type="submit">Add Transaction</button>
+        </form>
+
+        <div class="transactions" id="transaction-list">
+            <!-- Transactions will be added here dynamically -->
+        </div>
+    </div>
+
+    <script>
+        let balance = 0;
+        const form = document.getElementById('expense-form');
+        const transactionList = document.getElementById('transaction-list');
+        const balanceDisplay = document.getElementById('balance');
+        const description = document.getElementById('description');
+        const amount = document.getElementById('amount');
+        const type = document.getElementById('type');
+
+        // Load transactions from localStorage
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        
+        // Update the display initially
+        updateDisplay();
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const descriptionValue = description.value;
+            const amountValue = parseFloat(amount.value);
+            const typeValue = type.value;
+            
+            // Create new transaction
+            const transaction = {
+                description: descriptionValue,
+                amount: amountValue,
+                type: typeValue,
+                date: new Date().toISOString()
+            };
+            
+            // Add to transactions array
+            transactions.push(transaction);
+            
+            // Save to localStorage
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            
+            // Update display
+            updateDisplay();
+            
+            // Reset form
+            form.reset();
+        });
+
+        function updateDisplay() {
+            // Clear transaction list
+            transactionList.innerHTML = '';
+            
+            // Calculate balance and display transactions
+            balance = 0;
+            
+            transactions.forEach((transaction, index) => {
+                const amount = transaction.amount;
+                if(transaction.type === 'income') {
+                    balance += amount;
+                } else {
+                    balance -= amount;
+                }
+                
+                const transactionElement = document.createElement('div');
+                transactionElement.className = 'transaction';
+                transactionElement.innerHTML = `
+                    <div>${transaction.description}</div>
+                    <div class="${transaction.type}">
+                        ${transaction.type === 'expense' ? '-' : '+'}₹${amount.toFixed(2)}
+                        <button onclick="deleteTransaction(${index})">Delete</button>
+                    </div>
+                `;
+                
+                transactionList.appendChild(transactionElement);
+            });
+            
+            // Update balance display
+            balanceDisplay.textContent = `₹${balance.toFixed(2)}`;
+            balanceDisplay.style.color = balance >= 0 ? '#2ecc71' : '#e74c3c';
+
+        }
+
+        function deleteTransaction(index) {
+            transactions.splice(index, 1);
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            updateDisplay();
+        }
+    </script>
+</body>
+</html>
+
+    <script>
+        // User authentication state
+        let currentUser = null;
+
+        // Login form elements
+        const loginSection = document.createElement('div');
+        loginSection.innerHTML = `
+            <div id="loginForm" style="margin-bottom: 20px;">
+                <h3>Login</h3>
+                <input type="text" id="username" placeholder="Username" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button onclick="handleLogin()">Login</button>
+                <button onclick="handleSignup()">Sign Up</button>
+                <p id="loginMessage"></p>
+            </div>
+        `;
+        document.body.insertBefore(loginSection, document.querySelector('.container'));
+
+        // Hide transaction container initially
+        const container = document.querySelector('.container');
+        container.style.display = 'none';
+
+        function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Get users from localStorage
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+            
+            if (users[username] && users[username] === password) {
+                currentUser = username;
+                loginSuccess();
+            } else {
+                showLoginMessage('Invalid username or password', 'red');
+            }
+        }
+
+        function handleSignup() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showLoginMessage('Please enter both username and password', 'red');
+                return;
+            }
+
+            // Get users from localStorage
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+            
+            if (users[username]) {
+                showLoginMessage('Username already exists', 'red');
+                return;
+            }
+
+            // Save new user
+            users[username] = password;
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            currentUser = username;
+            loginSuccess();
+        }
+
+        function loginSuccess() {
+            // Hide login form
+            loginSection.style.display = 'none';
+            
+            // Show transaction container
+            container.style.display = 'block';
+            
+            // Load user-specific transactions
+            transactions = JSON.parse(localStorage.getItem(`transactions_${currentUser}`)) || [];
+            updateDisplay();
+            
+            showLoginMessage(`Welcome, ${currentUser}!`, 'green');
+        }
+
+        function showLoginMessage(message, color) {
+            const loginMessage = document.getElementById('loginMessage');
+            loginMessage.textContent = message;
+            loginMessage.style.color = color;
+        }
+
+        // Modify existing functions to handle user-specific data
+        function deleteTransaction(index) {
+            transactions.splice(index, 1);
+            localStorage.setItem(`transactions_${currentUser}`, JSON.stringify(transactions));
+            updateDisplay();
+        }
+
+        // Modify form submit event to save user-specific transactions
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const transaction = {
+                description: description.value,
+                amount: parseFloat(amount.value),
+                type: type.value,
+                date: new Date().toISOString()
+            };
+            
+            transactions.push(transaction);
+            localStorage.setItem(`transactions_${currentUser}`, JSON.stringify(transactions));
+            
+            updateDisplay();
+            form.reset();
+        });
+    </script>
