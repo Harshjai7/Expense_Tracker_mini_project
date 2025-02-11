@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,56 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Tracker</title>
     <style>
+        :root {
+            --bg-color: #f7f7f7;
+            --container-bg: white;
+            --text-color: #333;
+            --border-color: #ddd;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --text-color: #fff;
+            --border-color: #444;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: Arial, sans-serif;
         }
-
         body {
-            background: #f7f7f7;
+            background: var(--bg-color);
             padding: 20px;
+            color: var(--text-color);
+            transition: background-color 0.3s;
         }
-
         .container {
             max-width: 800px;
             margin: 0 auto;
-            background: white;
+            background: var(--container-bg);
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-
         h1 {
             text-align: center;
-            color: #333;
+            color: var(--text-color);
             margin-bottom: 20px;
         }
-
         .balance-container {
             text-align: center;
             margin-bottom: 20px;
         }
-
         .balance {
             font-size: 24px;
             font-weight: bold;
             color: #2ecc71;
         }
-
+        .summary-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .summary-box {
+            text-align: center;
+            padding: 15px;
+            border-radius: 5px;
+            background: var(--bg-color);
+            width: 30%;
+        }
         .form-group {
             margin-bottom: 15px;
         }
-
         input, select {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             border-radius: 5px;
             margin-top: 5px;
+            background: var(--container-bg);
+            color: var(--text-color);
         }
-
         button {
             width: 100%;
             padding: 10px;
@@ -65,259 +85,552 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            margin-bottom: 10px;
         }
-
         button:hover {
             background: #27ae60;
         }
-
         .transactions {
             margin-top: 20px;
         }
-
         .transaction {
             display: flex;
             justify-content: space-between;
             padding: 10px;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
         }
-
+        .delete-btn, .edit-btn {
+            cursor: pointer;
+            padding: 5px;
+            margin-left: 5px;
+        }
+        .delete-btn {
+            color: #e74c3c;
+        }
+        .edit-btn {
+            color: #3498db;
+        }
         .expense {
             color: #e74c3c;
         }
-
         .income {
             color: #2ecc71;
+        }
+        .filter-container {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .category-select {
+            width: auto;
+        }
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: auto;
+            padding: 8px 15px;
+            background: #e74c3c;
+        }
+        .chart-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--bg-color);
+            border-radius: 5px;
+        }
+        .forgot-password {
+            background: #3498db;
+            margin-top: 10px;
+        }
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 120px;
+            width: auto;
+            padding: 8px 15px;
+            background: #9b59b6;
+        }
+        .export-import {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .export-import button {
+            width: auto;
+            padding: 8px 15px;
+            background: #f39c12;
+        }
+        .chart-controls {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .chart-type-select {
+            width: auto;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div id="login-section">
+        <h3>Login</h3>
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button onclick="handleLogin()">Login</button>
+        <button onclick="handleSignup()">Sign Up</button>
+        <button onclick="handleForgotPassword()" class="forgot-password">Forgot Password</button>
+        <p id="loginMessage"></p>
+    </div>
+    <div class="container" id="tracker-container" style="display: none;">
+        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+        <button class="logout-btn" onclick="handleLogout()">Logout</button>
         <h1>Expense Tracker</h1>
-        
+        <div class="export-import">
+            <button onclick="exportTransactions()">Export Data</button>
+            <button onclick="importTransactions()">Import Data</button>
+            <input type="file" id="import-file" style="display: none;" accept=".json">
+        </div>
         <div class="balance-container">
             <h2>Current Balance</h2>
             <div class="balance" id="balance">₹0.00</div>
         </div>
-
-
+        <div class="summary-container">
+            <div class="summary-box">
+                <h3>Total Income</h3>
+                <div id="total-income">₹0.00</div>
+            </div>
+            <div class="summary-box">
+                <h3>Total Expenses</h3>
+                <div id="total-expenses">₹0.00</div>
+            </div>
+            <div class="summary-box">
+                <h3>This Month</h3>
+                <div id="month-total">₹0.00</div>
+            </div>
+        </div>
         <form id="expense-form">
+            <input type="hidden" id="edit-id">
             <div class="form-group">
                 <label for="description">Description</label>
                 <input type="text" id="description" required>
             </div>
-            
             <div class="form-group">
                 <label for="amount">Amount</label>
                 <input type="number" id="amount" required>
             </div>
-            
             <div class="form-group">
                 <label for="type">Type</label>
-                <select id="type" required>
+                <select id="type" required onchange="updateCategoryOptions()">
                     <option value="expense">Expense</option>
                     <option value="income">Income</option>
                 </select>
             </div>
-            
-            <button type="submit">Add Transaction</button>
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" required>
+                    <option value="food">Food</option>
+                    <option value="transport">Transport</option>
+                    <option value="utilities">Utilities</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <button type="submit" id="submit-btn">Add Transaction</button>
         </form>
-
-        <div class="transactions" id="transaction-list">
-            <!-- Transactions will be added here dynamically -->
+        <div class="filter-container">
+            <select id="filter-type" class="category-select">
+                <option value="all">All Types</option>
+                <option value="expense">Expenses Only</option>
+                <option value="income">Income Only</option>
+            </select>
+            <select id="filter-category" class="category-select">
+                <option value="all">All Categories</option>
+                <option value="food">Food</option>
+                <option value="transport">Transport</option>
+                <option value="utilities">Utilities</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="shopping">Shopping</option>
+                <option value="other">Other</option>
+            </select>
+            <input type="month" id="filter-month">
+        </div>
+        <div class="transactions" id="transaction-list"></div>
+        <div class="chart-container">
+            <div class="chart-controls">
+                <select id="chart-type" class="chart-type-select">
+                    <option value="pie">Pie Chart</option>
+                    <option value="bar">Bar Chart</option>
+                    <option value="line">Line Chart</option>
+                </select>
+                <select id="chart-period" class="chart-type-select">
+                    <option value="all">All Time</option>
+                    <option value="month">This Month</option>
+                    <option value="year">This Year</option>
+                </select>
+            </div>
+            <canvas id="expenseChart"></canvas>
         </div>
     </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        let balance = 0;
-        const form = document.getElementById('expense-form');
-        const transactionList = document.getElementById('transaction-list');
-        const balanceDisplay = document.getElementById('balance');
-        const description = document.getElementById('description');
-        const amount = document.getElementById('amount');
-        const type = document.getElementById('type');
+        let currentUser = localStorage.getItem('currentUser') || null;
+        let transactions = JSON.parse(localStorage.getItem(`transactions_${currentUser}`)) || [];
+        const trackerContainer = document.getElementById('tracker-container');
+        const loginSection = document.getElementById('login-section');
+        let expenseChart;
+        let editMode = false;
 
-        // Load transactions from localStorage
-        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-        
-        // Update the display initially
-        updateDisplay();
+        // Check for saved theme
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
 
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const descriptionValue = description.value;
-            const amountValue = parseFloat(amount.value);
-            const typeValue = type.value;
-            
-            // Create new transaction
-            const transaction = {
-                description: descriptionValue,
-                amount: amountValue,
-                type: typeValue,
-                date: new Date().toISOString()
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        function exportTransactions() {
+            const dataStr = JSON.stringify(transactions, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `transactions_${currentUser}_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importTransactions() {
+            const input = document.getElementById('import-file');
+            input.click();
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedTransactions = JSON.parse(e.target.result);
+                        if (Array.isArray(importedTransactions)) {
+                            transactions = importedTransactions;
+                            localStorage.setItem(`transactions_${currentUser}`, JSON.stringify(transactions));
+                            updateDisplay();
+                            alert('Transactions imported successfully!');
+                        } else {
+                            alert('Invalid file format');
+                        }
+                    } catch (error) {
+                        alert('Error importing file');
+                    }
+                };
+                reader.readAsText(file);
             };
-            
-            // Add to transactions array
-            transactions.push(transaction);
-            
-            // Save to localStorage
-            localStorage.setItem('transactions', JSON.stringify(transactions));
-            
-            // Update display
-            updateDisplay();
-            
-            // Reset form
-            form.reset();
-        });
-
-        function updateDisplay() {
-            // Clear transaction list
-            transactionList.innerHTML = '';
-            
-            // Calculate balance and display transactions
-            balance = 0;
-            
-            transactions.forEach((transaction, index) => {
-                const amount = transaction.amount;
-                if(transaction.type === 'income') {
-                    balance += amount;
-                } else {
-                    balance -= amount;
-                }
-                
-                const transactionElement = document.createElement('div');
-                transactionElement.className = 'transaction';
-                transactionElement.innerHTML = `
-                    <div>${transaction.description}</div>
-                    <div class="${transaction.type}">
-                        ${transaction.type === 'expense' ? '-' : '+'}₹${amount.toFixed(2)}
-                        <button onclick="deleteTransaction(${index})">Delete</button>
-                    </div>
-                `;
-                
-                transactionList.appendChild(transactionElement);
-            });
-            
-            // Update balance display
-            balanceDisplay.textContent = `₹${balance.toFixed(2)}`;
-            balanceDisplay.style.color = balance >= 0 ? '#2ecc71' : '#e74c3c';
-
         }
 
-        function deleteTransaction(index) {
-            transactions.splice(index, 1);
-            localStorage.setItem('transactions', JSON.stringify(transactions));
+        function editTransaction(id) {
+            const transaction = transactions.find(t => t.id === id);
+            if (transaction) {
+                editMode = true;
+                document.getElementById('edit-id').value = id;
+                document.getElementById('description').value = transaction.description;
+                document.getElementById('amount').value = transaction.amount;
+                document.getElementById('type').value = transaction.type;
+                updateCategoryOptions();
+                document.getElementById('category').value = transaction.category;
+                document.getElementById('submit-btn').textContent = 'Update Transaction';
+            }
+        }
+
+        function handleForgotPassword() {
+            const username = prompt("Please enter your username:");
+            if (!username) {
+                return;
+            }
+            
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+            if (!users[username]) {
+                alert('Username not found');
+                return;
+            }
+            
+            const newPassword = prompt("Enter your new password:");
+            if (!newPassword) {
+                return;
+            }
+            
+            users[username] = btoa(newPassword);
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Password has been updated successfully');
+        }
+
+        function updateCategoryOptions() {
+            const type = document.getElementById('type').value;
+            const categorySelect = document.getElementById('category');
+            
+            categorySelect.innerHTML = ''; // Clear existing options
+            
+            if (type === 'expense') {
+                const expenseCategories = [
+                    'food', 'transport', 'utilities', 'entertainment', 'shopping', 'other'
+                ];
+                expenseCategories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+                    categorySelect.appendChild(option);
+                });
+            } else {
+                const incomeCategories = [
+                    'salary', 'freelance', 'investments', 'gifts', 'rental', 'other'
+                ];
+                incomeCategories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+                    categorySelect.appendChild(option);
+                });
+            }
+        }
+
+        if (currentUser) {
+            loginSection.style.display = 'none';
+            trackerContainer.style.display = 'block';
             updateDisplay();
         }
-    </script>
-</body>
-</html>
-
-    <script>
-        // User authentication state
-        let currentUser = null;
-
-        // Login form elements
-        const loginSection = document.createElement('div');
-        loginSection.innerHTML = `
-            <div id="loginForm" style="margin-bottom: 20px;">
-                <h3>Login</h3>
-                <input type="text" id="username" placeholder="Username" required>
-                <input type="password" id="password" placeholder="Password" required>
-                <button onclick="handleLogin()">Login</button>
-                <button onclick="handleSignup()">Sign Up</button>
-                <p id="loginMessage"></p>
-            </div>
-        `;
-        document.body.insertBefore(loginSection, document.querySelector('.container'));
-
-        // Hide transaction container initially
-        const container = document.querySelector('.container');
-        container.style.display = 'none';
 
         function handleLogin() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            
-            // Get users from localStorage
             const users = JSON.parse(localStorage.getItem('users')) || {};
-            
-            if (users[username] && users[username] === password) {
+            if (users[username] && users[username] === btoa(password)) {
                 currentUser = username;
-                loginSuccess();
+                localStorage.setItem('currentUser', currentUser);
+                transactions = JSON.parse(localStorage.getItem(`transactions_${currentUser}`)) || [];
+                loginSection.style.display = 'none';
+                trackerContainer.style.display = 'block';
+                updateDisplay();
             } else {
-                showLoginMessage('Invalid username or password', 'red');
+                document.getElementById('loginMessage').textContent = 'Invalid username or password';
             }
         }
 
         function handleSignup() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            
-            if (!username || !password) {
-                showLoginMessage('Please enter both username and password', 'red');
-                return;
-            }
-
-            // Get users from localStorage
-            const users = JSON.parse(localStorage.getItem('users')) || {};
-            
+            let users = JSON.parse(localStorage.getItem('users')) || {};
             if (users[username]) {
-                showLoginMessage('Username already exists', 'red');
+                document.getElementById('loginMessage').textContent = 'Username already exists';
                 return;
             }
-
-            // Save new user
-            users[username] = password;
+            users[username] = btoa(password);
             localStorage.setItem('users', JSON.stringify(users));
-            
             currentUser = username;
-            loginSuccess();
-        }
-
-        function loginSuccess() {
-            // Hide login form
+            localStorage.setItem('currentUser', currentUser);
+            transactions = [];
+            localStorage.setItem(`transactions_${currentUser}`, JSON.stringify(transactions));
             loginSection.style.display = 'none';
-            
-            // Show transaction container
-            container.style.display = 'block';
-            
-            // Load user-specific transactions
-            transactions = JSON.parse(localStorage.getItem(`transactions_${currentUser}`)) || [];
-            updateDisplay();
-            
-            showLoginMessage(`Welcome, ${currentUser}!`, 'green');
-        }
-
-        function showLoginMessage(message, color) {
-            const loginMessage = document.getElementById('loginMessage');
-            loginMessage.textContent = message;
-            loginMessage.style.color = color;
-        }
-
-        // Modify existing functions to handle user-specific data
-        function deleteTransaction(index) {
-            transactions.splice(index, 1);
-            localStorage.setItem(`transactions_${currentUser}`, JSON.stringify(transactions));
+            trackerContainer.style.display = 'block';
             updateDisplay();
         }
 
-        // Modify form submit event to save user-specific transactions
-        form.addEventListener('submit', (e) => {
+        function handleLogout() {
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+            transactions = [];
+            loginSection.style.display = 'block';
+            trackerContainer.style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('loginMessage').textContent = '';
+        }
+
+        function addTransaction(e) {
             e.preventDefault();
+            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const type = document.getElementById('type').value;
+            const category = document.getElementById('category').value;
+            const editId = document.getElementById('edit-id').value;
             
-            const transaction = {
-                description: description.value,
-                amount: parseFloat(amount.value),
-                type: type.value,
-                date: new Date().toISOString()
-            };
+            if (editMode && editId) {
+                const index = transactions.findIndex(t => t.id === parseInt(editId));
+                if (index !== -1) {
+                    transactions[index] = {
+                        ...transactions[index],
+                        description,
+                        amount,
+                        type,
+                        category
+                    };
+                }
+                editMode = false;
+                document.getElementById('submit-btn').textContent = 'Add Transaction';
+            } else {
+                const transaction = {
+                    id: Date.now(),
+                    description,
+                    amount,
+                    type,
+                    category,
+                    date: new Date().toISOString()
+                };
+                transactions.push(transaction);
+            }
             
-            transactions.push(transaction);
             localStorage.setItem(`transactions_${currentUser}`, JSON.stringify(transactions));
-            
             updateDisplay();
-            form.reset();
-        });
+            document.getElementById('expense-form').reset();
+            document.getElementById('edit-id').value = '';
+            updateCategoryOptions();
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('Are you sure you want to delete this transaction?')) {
+                transactions = transactions.filter(t => t.id !== id);
+                localStorage.setItem(`transactions_${currentUser}`, JSON.stringify(transactions));
+                updateDisplay();
+            }
+        }
+
+        function updateDisplay() {
+            const transactionList = document.getElementById('transaction-list');
+            const balance = document.getElementById('balance');
+            const totalIncome = document.getElementById('total-income');
+            const totalExpenses = document.getElementById('total-expenses');
+            const monthTotal = document.getElementById('month-total');
+            
+            const filterType = document.getElementById('filter-type').value;
+            const filterCategory = document.getElementById('filter-category').value;
+            const filterMonth = document.getElementById('filter-month').value;
+
+            let filteredTransactions = transactions;
+
+            if (filterType !== 'all') {
+                filteredTransactions = filteredTransactions.filter(t => t.type === filterType);
+            }
+            if (filterCategory !== 'all') {
+                filteredTransactions = filteredTransactions.filter(t => t.category === filterCategory);
+            }
+            if (filterMonth) {
+                filteredTransactions = filteredTransactions.filter(t => 
+                    t.date.substring(0, 7) === filterMonth
+                );
+            }
+
+            let total = 0;
+            let incomeTotal = 0;
+            let expenseTotal = 0;
+            let monthlyTotal = 0;
+            const currentMonth = new Date().toISOString().substring(0, 7);
+
+            transactions.forEach(transaction => {
+                if (transaction.type === 'income') {
+                    total += transaction.amount;
+                    incomeTotal += transaction.amount;
+                } else {
+                    total -= transaction.amount;
+                    expenseTotal += transaction.amount;
+                }
+
+                if (transaction.date.substring(0, 7) === currentMonth) {
+                    monthlyTotal += transaction.type === 'income' ? transaction.amount : -transaction.amount;
+                }
+            });
+            
+            balance.textContent = `₹${total.toFixed(2)}`;
+            totalIncome.textContent = `₹${incomeTotal.toFixed(2)}`;
+            totalExpenses.textContent = `₹${expenseTotal.toFixed(2)}`;
+            monthTotal.textContent = `₹${monthlyTotal.toFixed(2)}`;
+            
+            transactionList.innerHTML = filteredTransactions.map(transaction => `
+                <div class="transaction">
+                    <div>
+                        <div>${transaction.description}</div>
+                        <small>${new Date(transaction.date).toLocaleDateString()} - ${transaction.category}</small>
+                    </div>
+                    <div class="${transaction.type}">
+                        ${transaction.type === 'income' ? '+' : '-'}₹${transaction.amount}
+                        <span class="edit-btn" onclick="editTransaction(${transaction.id})">✏️</span>
+                        <span class="delete-btn" onclick="deleteTransaction(${transaction.id})">❌</span>
+                    </div>
+                </div>
+            `).join('');
+
+            updateChart();
+        }
+
+        function updateChart() {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            const chartType = document.getElementById('chart-type').value;
+            const chartPeriod = document.getElementById('chart-period').value;
+            
+            let filteredTransactions = transactions;
+            if (chartPeriod === 'month') {
+                const currentMonth = new Date().toISOString().substring(0, 7);
+                filteredTransactions = transactions.filter(t => t.date.substring(0, 7) === currentMonth);
+            } else if (chartPeriod === 'year') {
+                const currentYear = new Date().getFullYear().toString();
+                filteredTransactions = transactions.filter(t => t.date.substring(0, 4) === currentYear);
+            }
+
+            const categoryTotals = {};
+            filteredTransactions
+                .filter(t => t.type === 'expense')
+                .forEach(t => {
+                    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+                });
+
+            if (expenseChart) {
+                expenseChart.destroy();
+            }
+
+            const chartConfig = {
+                type: chartType,
+                data: {
+                    labels: Object.keys(categoryTotals),
+                    datasets: [{
+                        data: Object.values(categoryTotals),
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB',
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF',
+                            '#FF9F40'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Expense Distribution by Category'
+                        }
+                    }
+                }
+            };
+
+            if (chartType === 'line') {
+                chartConfig.data.datasets[0].fill = false;
+                chartConfig.data.datasets[0].tension = 0.1;
+            }
+
+            expenseChart = new Chart(ctx, chartConfig);
+        }
+
+        document.getElementById('expense-form').addEventListener('submit', addTransaction);
+        document.getElementById('filter-type').addEventListener('change', updateDisplay);
+        document.getElementById('filter-category').addEventListener('change', updateDisplay);
+        document.getElementById('filter-month').addEventListener('change', updateDisplay);
+        document.getElementById('chart-type').addEventListener('change', updateChart);
+        document.getElementById('chart-period').addEventListener('change', updateChart);
+        
+        // Initialize category options
+        updateCategoryOptions();
     </script>
+</body>
+</html>
