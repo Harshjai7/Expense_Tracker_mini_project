@@ -1,7 +1,7 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Tracker</title>
@@ -226,9 +226,9 @@
         <button class="logout-btn" onclick="handleLogout()">Logout</button>
         <h1>Expense Tracker</h1>
         <div class="export-import">
-            <button onclick="exportTransactions()">Export to Excel</button>
-            <button onclick="importTransactions()">Import from Excel</button>
-            <input type="file" id="import-file" style="display: none;" accept=".xlsx, .xls">
+            <button onclick="exportTransactions()">Export Data</button>
+            <button onclick="importTransactions()">Import Data</button>
+            <input type="file" id="import-file" style="display: none;" accept=".csv">
         </div>
         <div class="balance-container">
             <h2>Current Balance</h2>
@@ -342,7 +342,6 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script>
         let currentUser = localStorage.getItem('currentUser') || null;
         let transactions = JSON.parse(localStorage.getItem(`transactions_${currentUser}`)) || [];
@@ -363,23 +362,125 @@
             localStorage.setItem('theme', newTheme);
         }
 
+        function setBudget() {
+            const category = document.getElementById('budget-category').value;
+            const amount = parseFloat(document.getElementById('budget-amount').value);
+            
+            if (!amount || amount <= 0) {
+                alert('Please enter a valid budget amount');
+                return;
+            }
+
+            budgets[category] = amount;
+            localStorage.setItem(`budgets_${currentUser}`, JSON.stringify(budgets));
+            updateBudgetDisplay();
+            document.getElementById('budget-amount').value = '';
+        }
+
+        function updateBudgetDisplay() {
+            const budgetList = document.getElementById('budget-list');
+            const currentMonth = new Date().toISOString().substring(0, 7);
+            
+            let budgetHTML = '';
+            
+            for (const category in budgets) {
+                const budget = budgets[category];
+                const monthlyExpenses = transactions
+                    .filter(t => t.type === 'expense' && 
+                            t.category === category && 
+                            t.date.substring(0, 7) === currentMonth)
+                    .reduce((sum, t) => sum + t.amount, 0);
+                
+                const percentage = (monthlyExpenses / budget) * 100;
+                const isOverBudget = percentage > 100;
+                
+                budgetHTML += `
+                    <div class="budget-category">
+                        <div>
+                            <h4>${category.charAt(0).toUpperCase() + category.slice(1)}</h4>
+                            <p>Budget: ₹${budget.toFixed(2)}</p>
+                            <p>Spent: ₹${monthlyExpenses.toFixed(2)}</p>
+                            <span class="edit-btn" onclick="editBudget('${category}')">✏️</span>
+                            <span class="delete-btn" onclick="deleteBudget('${category}')">❌</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress ${isOverBudget ? 'over-budget' : ''}" 
+                                 style="width: ${Math.min(percentage, 100)}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            budgetList.innerHTML = budgetHTML;
+        }
+
+        function editBudget(category) {
+            const newAmount = prompt(`Enter new budget amount for ${category}:`);
+            if (newAmount && !isNaN(newAmount) && parseFloat(newAmount) > 0) {
+                budgets[category] = parseFloat(newAmount);
+                localStorage.setItem(`budgets_${currentUser}`, JSON.stringify(budgets));
+                updateBudgetDisplay();
+            }
+        }
+
+        function deleteBudget(category) {
+            if (confirm(`Are you sure you want to delete budget for ${category}?`)) {
+                delete budgets[category];
+                localStorage.setItem(`budgets_${currentUser}`, JSON.stringify(budgets));
+                updateBudgetDisplay();
+            }
+        }
+
+        function updateMonthlyBreakdown() {
+            const monthlyBreakdown = document.getElementById('monthly-breakdown');
+            const currentMonth = new Date().toISOString().substring(0, 7);
+            
+            const monthlyTransactions = transactions.filter(t => 
+                t.date.substring(0, 7) === currentMonth
+            );
+
+            const categoryTotals = {};
+            monthlyTransactions.forEach(t => {
+                if (t.type === 'expense') {
+                    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+                }
+            });
+
+            let breakdownHTML = '<div class="category-breakdown">';
+            for (const category in categoryTotals) {
+                breakdownHTML += `
+                    <div class="category-item">
+                        <span>${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                        <span>₹${categoryTotals[category].toFixed(2)}</span>
+                    </div>
+                `;
+            }
+            breakdownHTML += '</div>';
+            
+            monthlyBreakdown.innerHTML = breakdownHTML;
+        }
+
         function exportTransactions() {
-            // Convert transactions to Excel-friendly format
-            const excelData = transactions.map(t => ({
-                Date: new Date(t.date).toLocaleDateString(),
-                Description: t.description,
-                Amount: t.amount,
-                Type: t.type,
-                Category: t.category
-            }));
+            let csvContent = "Date,Description,Amount,Type,Category\n";
+            transactions.forEach(t => {
+                const row = [
+                    new Date(t.date).toLocaleDateString(),
+                    t.description,
+                    t.amount,
+                    t.type,
+                    t.category
+                ].join(",");
+                csvContent += row + "\n";
+            });
 
-            // Create worksheet
-            const ws = XLSX.utils.json_to_sheet(excelData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Transactions");
-
-            // Generate Excel file
-            XLSX.writeFile(wb, `transactions_${currentUser}_${new Date().toLocaleDateString()}.xlsx`);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `transactions_${currentUser}_${new Date().toLocaleDateString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function importTransactions() {
@@ -389,30 +490,31 @@
                 const file = e.target.files[0];
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
+                    const text = e.target.result;
+                    const rows = text.split('\n');
+                    // Skip header row
+                    rows.shift();
                     
-                    // Get first worksheet
-                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                    
-                    // Convert to JSON
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    // Convert Excel format back to our transaction format
-                    transactions = jsonData.map(row => ({
-                        id: Date.now() + Math.random(), // Generate new ID
-                        description: row.Description,
-                        amount: parseFloat(row.Amount),
-                        type: row.Type,
-                        category: row.Category,
-                        date: new Date(row.Date).toISOString()
-                    }));
+                    const importedTransactions = rows
+                        .filter(row => row.trim()) // Remove empty rows
+                        .map(row => {
+                            const [date, description, amount, type, category] = row.split(',');
+                            return {
+                                id: Date.now() + Math.random(), // Generate unique ID
+                                date: new Date(date).toISOString(),
+                                description: description,
+                                amount: parseFloat(amount),
+                                type: type,
+                                category: category
+                            };
+                        });
 
+                    transactions = [...transactions, ...importedTransactions];
                     localStorage.setItem(`transactions_${currentUser}`, JSON.stringify(transactions));
                     updateDisplay();
                     alert('Transactions imported successfully!');
                 };
-                reader.readAsArrayBuffer(file);
+                reader.readAsText(file);
             };
         }
 
